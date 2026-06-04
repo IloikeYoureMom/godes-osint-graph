@@ -8,7 +8,7 @@ from enrichment import enrich_entity
 app = Flask(__name__)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'osint_graph.db')
 UPLOAD_FOLDER = os.path.join(app.static_folder or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'), 'uploads')
-# ─── Configuration ─────────────────────────────────
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -100,7 +100,7 @@ def index():
     return render_template('index.html')
 
 
-# ─── Entity CRUD ─────────────────────────────────────────────────
+
 
 @app.route('/api/entities', methods=['GET'])
 def list_entities():
@@ -215,7 +215,7 @@ def delete_entity(entity_id):
     return jsonify({'success': True})
 
 
-# ─── Relationship CRUD ────────────────────────────────────────────
+
 
 @app.route('/api/relationships', methods=['GET'])
 def list_relationships():
@@ -292,7 +292,7 @@ def delete_relationship(rel_id):
     return jsonify({'success': True})
 
 
-# ─── Graph Data ───────────────────────────────────────────────────
+
 
 @app.route('/api/graph')
 def get_graph():
@@ -360,7 +360,7 @@ def get_types():
     })
 
 
-# ─── OSINT Enrichment ────────────────────────────────────────────
+
 
 @app.route('/api/enrich/<int:entity_id>', methods=['POST'])
 def enrich_entity_endpoint(entity_id):
@@ -434,7 +434,7 @@ def enrich_entity_endpoint(entity_id):
         return jsonify({'error': str(e)}), 500
 
 
-# ─── Image Upload ─────────────────────────────────────────────────
+
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
@@ -454,7 +454,7 @@ def upload_image():
     return jsonify({'url': url, 'filename': filename})
 
 
-# ─── Export Graph ─────────────────────────────────────────────────
+
 
 @app.route('/api/export')
 def export_graph():
@@ -469,7 +469,7 @@ def export_graph():
     })
 
 
-# ─── Bulk Import ──────────────────────────────────────────────────
+
 
 @app.route('/api/bulk-import', methods=['POST'])
 def bulk_import():
@@ -516,7 +516,7 @@ def bulk_import():
     return jsonify({'created': len(created), 'errors': len(errors), 'entities': created, 'error_details': errors})
 
 
-# ─── Bulk Enrich ──────────────────────────────────────────────────
+
 
 @app.route('/api/bulk-enrich', methods=['POST'])
 def bulk_enrich():

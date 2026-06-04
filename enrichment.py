@@ -13,7 +13,7 @@ import urllib.request
 import urllib.error
 from urllib.parse import urlparse
 
-# ─── Israeli Phone Carrier Prefixes ──────────────────────────────
+
 
 ISRAELI_MOBILE_PREFIXES = {
     '050': 'Pelephone',
@@ -34,7 +34,7 @@ ISRAELI_LANDLINE_AREA_CODES = {
     '09': 'Sharon area',
 }
 
-# ─── Helpers ────────────────────────────────────────────────────
+
 
 def _clean_phone(phone: str) -> str:
     """Strip everything except digits and leading +/0."""
@@ -68,9 +68,9 @@ def _check_mx(domain: str) -> list[str]:
         return []
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  Phone Number Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 def enrich_phone(phone: str) -> dict:
     result = {
@@ -118,9 +118,9 @@ def enrich_phone(phone: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  Email Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 COMMON_EMAIL_PROVIDERS = {
     'gmail.com': 'Google Gmail',
@@ -223,9 +223,9 @@ def enrich_email(email: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  Domain / URL Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 def enrich_domain(domain_or_url: str) -> dict:
     result = {
@@ -288,9 +288,9 @@ def enrich_domain(domain_or_url: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  Username Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 SOCIAL_SEARCH_URLS = [
     ('TikTok', 'https://www.tiktok.com/@{username}'),
@@ -351,9 +351,9 @@ def enrich_username(username: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  IP Address Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 PRIVATE_RANGES = [
     ('10.0.0.0', '10.255.255.255'),
@@ -436,9 +436,9 @@ def enrich_ip(ip: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  Cryptocurrency Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 CRYPTO_PATTERNS = {
     'bitcoin': (r'^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$', 'Bitcoin (BTC)'),
@@ -508,9 +508,9 @@ def enrich_crypto(address: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  IP Geolocation Enrichment
-# ══════════════════════════════════════════════════════════════════
+
 
 def enrich_ip_geo(ip: str) -> dict:
     """Get geolocation data for a public IP using ip-api.com (free, no key)."""
@@ -550,9 +550,9 @@ def enrich_ip_geo(ip: str) -> dict:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════
+
 #  Main Enrichment Router
-# ══════════════════════════════════════════════════════════════════
+
 
 def enrich_entity(entity_type: str, name: str, profile_url: str = '') -> dict:
     """Route to the correct enrichment function based on entity type."""
