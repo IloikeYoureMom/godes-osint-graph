@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Godes OSINT Graph</title>
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%233b82f6'>G</text></svg>">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h1><span class="icon"></span> Godes OSINT Graph</h1>
+            <p class="subtitle">Intelligence Link Analysis</p>
+        </div>
+
+        <div class="sidebar-actions">
+            <button class="btn btn-primary" onclick="openAddEntityModal()">
+                <span class="icon">＋</span> Add
+            </button>
+            <button class="btn btn-secondary" onclick="openAddRelationshipModal()" id="addRelBtn" disabled>
+                <span class="icon"></span> Connect
+            </button>
+            <button class="btn btn-secondary" onclick="openBulkImportModal()" id="bulkImportBtn">
+                <span class="icon"></span> Bulk Import
+            </button>
+            <button class="btn btn-secondary" onclick="bulkEnrichAll()" id="bulkEnrichBtn">
+                <span class="icon"></span> Bulk Enrich
+            </button>
+            <button class="btn btn-secondary" onclick="exportGraph()" id="exportBtn">
+                <span class="icon"></span> Export
+            </button>
+        </div>
+
+        <div class="search-box">
+            <div style="display:flex;gap:6px;">
+                <input type="text" id="searchInput" placeholder="Search entities..." oninput="debounceSearch()" style="flex:1;">
+                <button class="btn btn-icon" onclick="toggleSort()" id="sortBtn" title="Toggle sort order">
+                    <span id="sortIcon"></span>
+                </button>
+            </div>
+            <select id="typeFilter" onchange="loadGraph()">
+                <option value="all">All Types</option>
+            </select>
+            <select id="platformFilter" onchange="loadGraph()" style="display:none;">
+                <option value="">All Platforms</option>
+            </select>
+        </div>
+
+        <div class="stats-bar">
+            <span id="entityCount">0</span> entities ·
+            <span id="relCount">0</span> connections
+            <span id="sortLabel" style="float:right;font-size:10px;">by recent</span>
+        </div>
+
+        <div id="entityList" class="entity-list">
+            <!-- Populated by JS -->
+        </div>
+    </aside>
+
+    <!-- Main Graph Area -->
+    <main id="graphArea">
+        <div id="graph"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <div class="empty-icon"></div>
+            <h2>Your intelligence web is empty</h2>
+            <p>Start adding entities and connecting them to build your intelligence graph.</p>
+            <button class="btn btn-primary" onclick="openAddEntityModal()">
+                <span class="icon">＋</span> Add Your First Entity
+            </button>
+        </div>
+
+        <!-- Floating graph controls -->
+        <div class="graph-controls">
+            <button class="btn btn-icon" onclick="network?.fit()" title="Fit to screen">⊞</button>
+            <button class="btn btn-icon" onclick="network?.zoomExtent()" title="Zoom to fit">⊡</button>
+            <button class="btn btn-icon" onclick="resetView()" title="Reset view">⟲</button>
+        </div>
+    </main>
+
+    <!-- Detail Panel -->
+    <aside id="detailPanel" class="detail-panel hidden">
+        <div class="detail-header">
+            <h2 id="detailTitle">Entity Details</h2>
+            <button class="btn btn-icon" onclick="closeDetailPanel()"></button>
+        </div>
+        <div id="detailContent">
+            <!-- Populated by JS -->
+        </div>
+    </aside>
+
+    <!-- Add/Edit Entity Modal -->
+    <div id="entityModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="entityModalTitle">Add Entity</h2>
+                <button class="btn btn-icon" onclick="closeModal('entityModal')"></button>
+            </div>
+            <form id="entityForm" onsubmit="saveEntity(event)">
+                <input type="hidden" id="editEntityId" value="">
+                <div class="form-group">
+                    <label for="entityName">Name *</label>
+                    <input type="text" id="entityName" required placeholder="e.g. johndoe@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="entityType">Type</label>
+                    <select id="entityType" onchange="onEntityTypeChange()"></select>
+                </div>
+
+                <!-- Conditional: Social Media Platform (hidden by default) -->
+                <div id="socialFields" class="social-fields hidden">
+                    <div class="form-group">
+                        <label for="entityPlatform">Platform</label>
+                        <select id="entityPlatform"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="entityProfileUrl">Profile URL</label>
+                        <input type="url" id="entityProfileUrl" placeholder="https://tiktok.com/@username">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="entityTags">Tags</label>
+                    <input type="text" id="entityTags" placeholder="comma, separated, tags">
+                </div>
+
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="autoEnrichCheck" style="width:auto;">
+                    <label for="autoEnrichCheck" style="margin:0;font-size:12px;cursor:pointer;"> Auto-enrich after saving</label>
+                </div>
+
+                <!-- Links Section -->
+                <div class="form-group">
+                    <label>Links / URLs</label>
+                    <div id="linksContainer"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addLinkRow()" style="margin-top:6px;">
+                        ＋ Add Link
+                    </button>
+                </div>
+
+                <!-- Images Section -->
+                <div class="form-group">
+                    <label>Images / Photos</label>
+                    <div id="imagesContainer"></div>
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addImageRow()">
+                            ＋ Add URL
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="uploadImageButton()">
+                             Upload File
+                        </button>
+                        <input type="file" id="imageUploadInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;" onchange="handleImageUpload(this)">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="entityNotes">Notes</label>
+                    <textarea id="entityNotes" rows="3" placeholder="Any additional intel..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('entityModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="entitySaveBtn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Relationship Modal -->
+    <div id="relModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add Connection</h2>
+                <button class="btn btn-icon" onclick="closeModal('relModal')"></button>
+            </div>
+            <form id="relForm" onsubmit="saveRelationship(event)">
+                <div class="form-group">
+                    <label for="relSource">Source Entity</label>
+                    <select id="relSource" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="relTarget">Target Entity</label>
+                    <select id="relTarget" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="relType">Relationship</label>
+                    <select id="relType"></select>
+                </div>
+                <div class="form-group">
+                    <label for="relNotes">Notes</label>
+                    <textarea id="relNotes" rows="2" placeholder="Context about this connection..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('relModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div id="bulkImportModal" class="modal-overlay hidden">
+        <div class="modal" style="width:520px;">
+            <div class="modal-header">
+                <h2> Bulk Import</h2>
+                <button class="btn btn-icon" onclick="closeModal('bulkImportModal')"></button>
+            </div>
+            <form onsubmit="bulkImport(event)">
+                <div class="form-group">
+                    <label>Paste one item per line (URLs, emails, phone numbers, usernames)</label>
+                    <textarea id="bulkImportText" rows="8" placeholder="https://tiktok.com/@user1
+https://instagram.com/user2
+054-1234567
+user@email.com
+@username" style="font-family:monospace;font-size:12px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="bulkImportType">Import as type</label>
+                    <select id="bulkImportType">
+                        <option value="auto">Auto-detect</option>
+                        <option value="url">URL</option>
+                        <option value="email">Email</option>
+                        <option value="phone_number">Phone Number</option>
+                        <option value="username">Username</option>
+                        <option value="social_media">Social Media</option>
+                    </select>
+                </div>
+                <div id="bulkImportPlatformField" class="form-group" style="display:none;">
+                    <label for="bulkImportPlatform">Social Media Platform</label>
+                    <select id="bulkImportPlatform"></select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="bulkAutoEnrich" checked>  Auto-enrich imported items</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('bulkImportModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="bulkImportSubmitBtn">Import</button>
+                </div>
+            </form>
+            <div id="bulkImportResults" style="padding:0 20px 20px;display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay hidden">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h2>Confirm Delete</h2>
+            </div>
+            <p id="deleteMessage">Are you sure you want to delete this?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
